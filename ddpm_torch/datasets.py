@@ -198,6 +198,52 @@ class CelebA_HQ(tvds.VisionDataset):
         return len(self.filename)
 
 
+@register_dataset
+class CTMRI(tvds.VisionDataset):
+    """
+    Custom PyTorch Dataset for CT/MRI images organized in directories.
+    Each sample is an image file in {root}/{base_folder}/{split}/.
+    Adjust the folder structure or filenames as needed for your use case.
+    """
+    base_folder = "ct_mri"
+    resolution = (256, 256)
+    channels = 3
+
+    # Default transforms: resize, tensor conversion, normalize to [-1, 1]
+    transform = transforms.Compose([
+        transforms.Resize(resolution),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+    _transform = transforms.PILToTensor()
+
+    def __init__(
+        self,
+        root,
+        split="train",
+        transform=None
+    ):
+        super().__init__(root, transform=transform or self._transform)
+        data_folder = os.path.join(root, self.base_folder, split)
+        # Collect image files (png, jpg, jpeg, bmp)
+        self.filenames = sorted([
+            fname
+            for fname in os.listdir(data_folder)
+            if fname.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))
+        ])
+        self.data_folder = data_folder
+
+    def __getitem__(self, index):
+        img_path = os.path.join(self.data_folder, self.filenames[index])
+        img = PIL.Image.open(img_path).convert("RGB")
+        if self.transform is not None:
+            img = self.transform(img)
+        return img
+
+    def __len__(self):
+        return len(self.filenames)
+
+
 ROOT = os.path.expanduser("~/datasets")
 
 
